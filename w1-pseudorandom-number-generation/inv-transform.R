@@ -9,10 +9,8 @@ unif_bernoulli <- function(n_samples, p) {
 
 unif_binomial <- function(n_samples, n, p) {
   x <- runif(n_samples)
-  #cdf <- unique(pbinom(1:n, n, p))
-  #return(cut(x, cdf, labels=FALSE))
   cdf <- unique(pbinom(-1:n, n, p))
-  return(cut(x, cdf, labels=FALSE)-1)
+  return(cut(x, cdf, labels=FALSE) - 1)
 }
 
 unif_geom <- function(n_samples, p) {
