@@ -1,0 +1,232 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Week 1 Graded Assignment
+
+Name: Jaidev Deshpande
+
+Roll No: 21F1003751
+
+---
+
+1.
+  - (i)Write a function in R generating a pseudorandom draw from U(0, 1) using 'Mixed Congruential Generator', which takes in parameters seed, a, c, m and n.
+
+    Note: Set c as 5 by default.
+
+
+```{r}
+mixed_congruential <- function(
+    seed, n_samples, a = 7^5, m = (2 ^ 31) - 1, c=5) {
+  x <- rep(NA, times=n_samples)
+  x[1] <- seed
+  hasRepeat <- FALSE
+  for (i in 2:n_samples) {
+    val <- (x[i - 1] * a + c) %% m
+    # If val is already present, the values will repeat
+    if (val %in% x[1:i]) {
+      hasRepeat <- TRUE
+      break
+    }
+    x[i] <- val
+  }
+  if (hasRepeat) {  # loop broke because of repeating values, so fill the rest
+    reps <- x[1:(i - 1)]  # the original sequence to be repeated
+    x[i:n_samples] <- rep(reps, length.out=(n_samples - i + 1))
+  }
+  return(x / m)
+}
+```
+
+  - (ii) What should be the conditions on the values of the parameters, i.e. seed, a, c and m, so that it generates seemingly good i.i.d draws from U(0, 1)?
+
+    * The seed can be any number such that $seed \leq m$. The last step in the multiplicative or mixed congruential method is to divide the obtained sequence by $m$ - so that the values lie in the interval $[0, 1]$. Therefore the seed _cannot_ be greater than $m$.
+    * The multiplier $a$ must be a value in the interval $(0, m)$. If $a > m$, the generated values repeat very often, and do not give the impression of being random.
+    * The increment $c$, can take a value of 0, but that would reduce the mixed congruential method to the multiplicative congruential method. Also, if $c$ and the seed are both 0, the algorithm does not generate any nonzero values. Additionally, $c$ should not be a multiple or a divisor of $m$, otherwise the expression reduces to $ax \mod m$, which can only produce a specific subset of values in the interval $[0, 1]$ - and thus cannot look uniform.
+    * The modulus $m$ must be a large number, preferably prime. If it is not a prime, then it may divide the numerator $ax + c$ with a zero remainder, and thus produces only a set of discrete values. On the other hand, if it is not large enough, the set of values produced would repeat very early.
+
+
+  - (iii) Use the above function to draw 1000 pseudorandom numbers with the following settings: $x_{0} = 5, m = 10^4, a = 2$. Print the first 20 generated pseudorandom numbers
+
+
+```{r}
+x <- mixed_congruential(5, n_samples=1000, m=10^4, a=2, c=5)
+print(x[1:20])
+```
+
+     [1] 0.0005 0.0015 0.0035 0.0075 0.0155 0.0315 0.0635 0.1275 0.2555 0.5115
+    [11] 0.0235 0.0475 0.0955 0.1915 0.3835 0.7675 0.5355 0.0715 0.1435 0.2875
+
+
+  - (iv) Using R, plot the histogram and traceplot for the above 1000 generated pseudo-random numbers.
+
+
+```{r}
+par(mfrow=c(1, 2))
+hist(x, main="", xlab="", sub="Histogram", font.sub=1)
+plot.ts(x, main="", xlab="", sub="Trace", font.sub=1)
+mtext("Mixed Congruential Method: 1000 samples, seed = 5, m = 104, a = 2", outer=TRUE,
+      side=3, line=-2, cex=1.5)
+```
+
+  - (v) The samples are clearly not uniformly generated. The histogram peaks near zero, and the trace plot clearly indicates a non-random sequence.
+
+  - (vi) The draws do not appear to be independent, as indicated by the trace plot. The **one** parameter that needs to be changed is $c$ - we can set it to a value that is relatively prime with $m$. Following is an example:
+
+
+```{r}
+x2 <- mixed_congruential(5, n_samples=1000, m=10^4, a=2, c=31)
+par(mfrow=c(1, 2))
+hist(x2, main="", xlab="", sub="Histogram", font.sub=1)
+plot.ts(x2, main="", xlab="", sub="Trace", font.sub=1)
+mtext("Mixed Congruential Method: 1000 samples, seed = 5, m = 104, a = 2", outer=TRUE,
+      side=3, line=-2, cex=1.5)
+```
+
+---
+
+2. Suppose a random variable $X$ take values $x_1, x_2, . . . , x_k$ with probabilities $p_1, p_2, \ldots, p_k$, respectively such that $\sum_{i=1}^{k}p_i = 1$.
+  - (i) Using R, write a function which takes in parameter as “x vec” and “prob vec” to generate a sample for the above given distribution, where “x vec” and “prob vec” stores the values of X and its corresponding probabilities.
+
+
+```{r}
+# Using the inverse transform method
+mypdf <- function(x_vec, prob_vec, n=1) {
+    Z <- c(0, cumsum(prob_vec))
+    U <- runif(n)
+    ix <- cut(U, Z, labels=FALSE)
+    return(x_vec[ix])
+}
+```
+
+
+  - (ii) $X : x \in \{1, 2, 3\}$ and $P(X=x) = [\frac{1}{4}, \frac{1}{2}, \frac{1}{4}]$ Draw 1000 samples, print first ten and last ten samples.
+
+
+```{r}
+x_vec = c(1:3)
+prob_vec = c(1 / 4, 1 / 2, 1 / 4)
+N <- 1000
+z <- mypdf(x_vec, prob_vec, N)
+print("First ten samples:")
+print(z[1:10])
+
+print("Last ten samples:")
+print(tail(z, 10))
+```
+
+
+  - (iii) Histogram of the samples
+
+
+```{r}
+hist(z)
+```
+
+  - (iv) Theoretical vs empirical mean.
+Theoretical mean: $$ E[X] = \sum_{x}xP(X=x) $$
+
+
+```{r}
+theoretical_mean = sum(x_vec * prob_vec)
+empirical_mean = mean(z)
+sprintf("Theoretical mean = %f; Empirical mean = %f", theoretical_mean, empirical_mean)
+```
+
+
+
+
+
+---
+
+3. Suppose we want to generate the samples from a negative binomial distribution with parameters $r, p$ using the Accept-Reject algorithm.
+
+  - (i) Which of the following can act as a proposal for the target distribution?
+
+**Note**: The negative binomial distribution has infinite support. Therefore, the proposal distribution should also have infinite support, and their PMFs should have some overlap.
+
+    - (a) Bernoulli - **cannot** be used as a proposal, since it has a finite support.
+    - (b) Binomial - **cannot** be used as a proposal, since it has a finite support.
+    - (c) Poisson - **can** be used as a proposal, since its support is the set of positive integers, same as the negative binomial distribution. However, the means of both distributions should be close to each other.
+    - (d) Hypergeometric - **cannot** be used as a proposal, since it has finite support.
+
+  - (ii) Obtain the expression for c (upper bound) if you use Geometric(p) as the proposed distribution.
+
+Suppose the target distribution (negative binomial) is in terms for $k$ failures with $r$ successes:
+$$f(k) = \dbinom{k + r - 1}{r - 1}p^{r}(1-p)^k$$
+
+and the proposal (geometric) distribution is defined in terms of number of failures ($k$):
+$$ g(k) = (1 -p)^{k}p$$
+
+Then the expression of the upper bound of their ratio is:
+
+$$ c = \max_{k} \Big\{\frac{f(k)}{g(k)}\Big\} = \max_{k} \Big\{\frac{\dbinom{k + r - 1}{r - 1}p^{r}(1-p)^k}{(1 -p)^{k}p}\Big\}$$
+
+$$ \therefore c = \max_{k} \Big\{\dbinom{k + r - 1}{r - 1}p^{r - 1}\Big\}$$
+
+  - (iii) Using R, write a function to generate the value of c, which takes in parameter r and p.
+
+
+```{r}
+findMaxRatio <- function(r, p) {
+    # Find mu, sigma for the target distro
+    mu = r * (1 - p) / p
+    sigma <- sqrt(mu / p)
+    # Calculate support only until mu + 4 x sigma
+    max_k <- ceiling(mu + 4 * sigma)
+    support <- 0:max_k
+    
+    # Calculate PMF of target and proposal
+    f_k <- dnbinom(support, size=r, prob=p)
+    g_k <- dgeom(support, prob=p)
+    upperBound <- f_k / g_k
+    
+    return(max(upperBound))
+}
+```
+
+  - (iv) For the above proposal distribution, write a function to generate a sample from the Negative Binomial distribution using R with parameters as $r$, $p$ and $c$.
+
+
+```{r}
+gen_sample <- function(r, p, upperBound) {
+    nTry <- 0
+    while (TRUE) {
+        nTry = nTry + 1
+        proposal <- rgeom(1, prob=p)
+        p_target <- dnbinom(proposal, size=r, prob=p)
+        p_prop <- dgeom(proposal, prob=p)
+        if (runif(1) < (p_target / (upperBound * p_prop))) {
+            break
+        }
+    }
+    return(proposal)
+}
+```
+
+  - (iv) Generate 1000 samples using the above function from negative binomial distribution with parameters; r = 3 and p = 0.4.
+
+
+```{r}
+r <- 3
+p <- 0.4
+cMax <- findMaxRatio(r, p)
+
+Z <- numeric(length=1000)
+for (ix in 1:length(Z)) {
+    Z[ix] <- gen_sample(r, p, cMax)
+}
+```
+
+  - (vi) Using R, check if the empirical mean of negative binomial is approximately equal to the theoretical mean.
+
+```{r}
+mu_theoretical = r * (1 - p) / p
+mu_empirical = mean(Z)
+
+print(mu_theoretical)
+print(mu_empirical)
+```
+---

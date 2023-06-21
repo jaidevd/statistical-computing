@@ -162,3 +162,6 @@ cython_debug/
 *.Rproj
 *.pdf
 .Rhistory
+
+# Ignore all assignments
+assignments/*
