@@ -1,0 +1,277 @@
+---
+title: 'Week 3: Graded Assignment'
+author: |
+  | Jaidev Deshpande
+  | Roll No: 21F1003751
+
+output:
+  pdf_document: default
+---
+
+------------------------------------------------------------------------
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1.  Generate a random sample from $X$ with density $$
+    f(x) = \frac{(1+x)e^{-x}}{2}; x > 0
+    $$ with Exponential($\lambda$) as the proposal.
+
+    (i). **Obtain the expression for the upper bound $c$.**
+
+    Suppose the proposal distribution is denoted as $g(x|\lambda)$, i.e.
+    $$g(x|\lambda) = \lambda e^{-\lambda x} ; x \geq 0; \lambda > 0$$
+    Also, suppose the ratio of the target and the proposal distributions is denoted by $h(x|\lambda)$, i.e.
+    $$h(x|\lambda) = \frac{(1+x)e^{-x}}{2\lambda e^{-\lambda x}}$$
+    
+    Therefore, the upper bound $c$ of the ratio is
+    $$ c = \max_{x} h(x|\lambda)$$
+    
+    Solving by taking the derivative of $h(x|\lambda)$ wrt $x$ and setting to zero,
+    the upper bound $c$ is,
+    
+    $$ c = \frac{e^{-\lambda}}{2\lambda (1 - \lambda)} $$
+    
+    (ii). **For what value of $x$ is $h(x|\lambda)$ maximized?**
+    
+    The value is $$x^* = \frac{\lambda}{1 - \lambda}$$
+    Note that $0 < \lambda < 1$. If this constraint fails, the support of either
+    the proposal or the target distribution is violated.
+    
+    (iii). **Find the optimal exponential $Exp(\lambda^*)$ as the proposal.**
+    
+    Since $c$ is a function of $\lambda$, the optimal value can be obtained by
+    computing the derivative of $c(\lambda)$ wrt $\lambda$ and setting to zero.
+    This gives us a particular exponential distribution, such that the upper
+    bound is _minimized_ (it is optimal since lower values of $c$ represent
+    higher acceptance rates). The values for $\lambda$ obtained thus are
+    $$ \lambda^* = \{\frac{\sqrt 5 - 1}{2},  -\frac{\sqrt 5 + 1}{2}\}$$
+    Of these, only the first solution is acceptable, since $\lambda > 0$ for a
+    valid exponential distribution.
+    $$ \therefore \lambda^* =\frac{\sqrt 5 - 1}{2} \approx0.618 $$
+    
+    (iv). **Write a function to generate a sample from $f(x)$ using $Exp(\lambda)$ as the proposal.**
+    ```{r}
+    ar.from.exp <- function(lambda_star = 0.618) {
+      n_try <- 0
+      
+      # compute c
+      paramC <- exp(-lambda_star) / (2 * lambda_star * (1 - lambda_star))  # \approx 1.141
+      
+      while(TRUE) {
+        n_try <- n_try + 1
+        # Generate a proposal
+        proposal <- rexp(1, rate = lambda_star)
+        
+        # probability of proposal under target distro
+        py <- (1 + proposal) * exp(-proposal) / 2
+        
+        # probability of proposal under proposal distro
+        qy <- dexp(proposal, rate = lambda_star)
+        
+        if (runif(1) < py / (paramC * qy)) {
+          break
+        }
+      }
+      return(c(proposal, n_try))
+    }
+    ```
+
+    (v). **Obtain 10000 samples from $f(x)$ using the above function.**
+    ```{r}
+    N <- 10000
+    samples <- numeric(N)
+    for (ix in 1:N) {
+      x <- ar.from.exp()
+      samples[ix] <- x[1]
+    }
+    ```
+    
+    (vi). **Check if the empirical mean is approximately equal to the theoretical mean.**
+    
+    Theoretical mean is obtained as
+    $$ E[X] = \int_0^\infty x \frac{(1 + x)e^{-x}}{2}dx $$
+    
+    This evaluates to $\frac{3}{2}$.
+    
+    ```{r}
+    # Empirical mean,
+    print(mean(samples))  # should be approx 1.5
+    ```
+    
+    (vii). **Plot density curve of target vs optimal proposal distribution.**
+    
+    ```{r}
+    support <- seq(min(samples), max(samples), length=1000)
+    theoretical <- (1 + support) * exp(-support) / 2
+    empirical <- density(samples)
+    plot(empirical, col="green", main="Empirical vs Ideal Density")
+    lines(support, theoretical, col="blue", lty=2)
+    legend("topright", lty=1:2, col=c("green", "blue"), legend=c("Empirical", "Ideal"))
+    ```
+
+    (viii). **Why is $\lambda^{*}$ optimal?**
+    
+    $Exp(\lambda^*)$ is the optimal proposal for $f(x)$ because it is the most efficient.
+    Other values of $\lambda$ would make the AR function less efficient.
+    
+    We had originally found the upper bound $c$ as a function of $\lambda$, i.e. we only 
+    had a family of exponential distributions parameterized by $\lambda$. Further,
+    the optimal $\lambda^*$ was obtained by minimizing $c$
+    (expressed as a function of $\lambda$). Since the probability of acceptance
+    of a proposed sample is inversely proportional to $c$, a lower value of $c$ is preferable.
+    Therefore, $\lambda^* = 0.618$ is optimal. As an example, consider the following snippet where
+    we use two different values of $\lambda$ which are not optimal. Let's say that $\lambda_1 = 0.1$
+    and $\lambda_2 = 0.9$.
+    
+    ```{r}
+    l1 <- 0.1
+    l2 <- 0.9
+    # See how many tries it takes for the AR to generate a sample for
+    # suboptimal lambda values
+    tries_l1 <- numeric(length=N)
+    tries_l2 <- numeric(length=N)
+    for (i in 1:N) {
+      x <- ar.from.exp(l1)
+      y <- ar.from.exp(l2)
+      tries_l1[i] <- x[2]
+      tries_l2[i] <- y[2]
+    }
+    print(mean(tries_l1))
+    print(mean(tries_l2))
+    ```
+    
+    Note that both values are higher than the optimal $c \approx 1.14$, thus
+    making the algorithm less efficient.
+
+---
+
+2. Normal distribution $\mathcal{N}(0, 1)$ with the Box-Muller method.
+
+    (i). **Generate a pair of samples from N(0, 1) using Box-Muller transformation method which takes in parameters `mu` and `sigma2`.**
+    
+    ```{r}
+    box.muller <- function(mu = 0, sigma2 = 1) {
+      u <- runif(2)
+      r <- sqrt(-2 * log(u[1]))
+      theta <- 2 * pi * u[2]
+      return(c(r * cos(theta), r * sin(theta)))
+    }
+    ```
+
+    (ii). **Modify the function to sample from $\mathcal{N}(\mu, \sigma^2)$, where $\mu \in \mathbb{R}$ and $\sigma^2 > 0$**.
+    
+    Using the following properties of mean and variance,
+    
+    $$ \mathbb{E}[X + c] = \mathbb{E}[X] + c $$
+    $$ Var(aX) = a^2 Var(X) $$
+    
+    we can include `mu` and `sigma2` in the function above (note that the
+    arguments to function were being ignored earlier.). The modified function is as follows:
+    
+    ```{r}
+    box.muller <- function(mu = 0, sigma2 = 1) {
+      u <- runif(2)
+      r <- sqrt(-2 * log(u[1]))
+      theta <- 2 * pi * u[2]
+      samples <- c(r * cos(theta), r * sin(theta))
+      return(sqrt(sigma2) * samples + mu)  # Scale by std, shift by mean
+    }
+    ```
+
+    (iii). **Use the above function to draw a sample of size 10000 from $\mathcal{N}(2, 5)$.**
+    
+    ```{r}
+    X <- matrix(, nrow=5000, ncol=2)
+    for (i in 1:5000) {
+      X[i,] <- box.muller(mu = 2, sigma2 = 5)
+    }
+    ```
+    
+    (iv). **Check if the empirical mean is equal to the theorectical mean.**
+    
+    ```{r}
+    ideal_mean <- 2
+    print(mean(X))  # should be /approx 2
+    ```
+    
+    (v). **Plot the density curve of the obtained samples and $\mathcal{N}(2, 5)$. Comment on the plot.**
+    
+    ```{r}
+    ideal <- rnorm(10000, mean=2, sd=sqrt(5))
+    plot(density(X), col="green", main="N(2, 5): Empirical vs Ideal Density")
+    lines(density(ideal), col="blue", lty=2)
+    legend("topright", lty=1:2, col=c("green", "blue"), legend=c("Empirical", "Ideal"))
+    ```
+    
+    The empirical density is reasonably close to the ideal density.
+
+---
+
+3. Sampling a hypersphere from a hypercube using the AR method.
+
+    (i). **Write a function that takes a parameter $p$ and returns a sample from the
+    target distribution, along with the number of tries**.
+  
+    ```{r}
+    hyperball <- function(p) {
+      
+      # upper bound C not really required in the case of sampling a sphere from a cube,
+      # but leaving it here for the record.
+      paramC <- (2 ^ p) * gamma(p / 2 + 1) / (pi ^ (p / 2))
+      
+      nTry <- 0
+      while (TRUE) {
+        nTry = nTry + 1
+        # Draw a uniform proposal from the hypercube
+        proposal <- runif(p, min=-1, max=1)
+        # accept if the L2 norm of the proposal <=1, i.e. proposal is in the unit sphere.
+        if (norm(proposal, type="2") <= 1) {
+          break
+        }
+      }
+      return(list("sample" = proposal, "tries" = nTry))
+    }
+    ```
+
+    (ii). **Using the above function, generate a sample of size 10000 with p = 2, 3, 5 and 7.**
+    
+    ```{r}
+    P <- c(2, 3, 5, 7)
+    N <- 10000
+    
+    n_loops <- numeric(length=4)
+    for (i in 1:length(P)) {
+      nTries <- 0
+      for (j in 1:N) {
+        x <- hyperball(P[i])
+        nTries <- nTries + x$tries
+      }
+      n_loops[i] <- nTries / N
+    }
+    ```
+    
+    (iii). **What happens when $p$ increases?**
+    
+    The number of tries needed to get a sample increases exponentially with $p$.
+    The volume of a $p$-dimensional hypercube is $2^p$, whereas the volume of a $p$-dimensional
+    sphere (with unit radius) is $\frac{\pi^{p/2}}{\Gamma(p / 2 + 1)}$.
+    Thus, the volume of the proposal distribution grows larger, and that of the target distribution
+    grows smaller, therefore making acceptance of samples very rare at higher values of $p$.
+    
+    This can be verified by comparing the values of the upper bound $c$ with the number of
+    loops obtained from the previous section.
+    
+    ```{r}
+    paramC <- (2 ^ P) * gamma(P / 2 + 1) / (pi ^ (P / 2))
+    plot(P, paramC, xlab="Dimensions", col="green")
+    lines(P, paramC, col="green", lty=2)
+    points(P, n_loops, col="red")
+    lines(P, n_loops, col="red", lty=2)
+    legend("topleft", lty=1:2, col=c("green", "red"), legend=c("Upper bound c",
+                                                                "Avg number of tries"))
+    ```
+As shown in the graph, the upper bound $c$ is an accurate estimator for the number of trials.
+
+---

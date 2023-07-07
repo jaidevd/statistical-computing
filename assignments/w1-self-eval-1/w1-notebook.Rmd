@@ -1,0 +1,158 @@
+---
+title: "W1-Self-Assessment (Part I)"
+subtitle: "Jaidev Deshpande\nRoll No: 21F1003751"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+## Week 1: Self-Assessment (Part I)
+
+---
+
+1.(i) Using R, create a variable named n and assign a random value to it.
+
+```{r}
+n <- runif(1, min=-1, max=1)
+print(n)
+```
+
+
+1.(ii) Write an R code to check the sign of the above assigned value to n. Print the following as output:
+
+  * “Number is positive” if the assigned value is positive.
+  * “Number is negative” if the assigned value is negative.
+  * “Number is zero” if the assigned value is zero.
+
+```{r}
+if (n > 0) {
+  print('Number is positive')
+} else if (n < 0) {
+  print('Number is negative')
+} else { print('Number is zero') }
+```
+
+
+1.(iii) Write an R code to count the number of positive and negative entries in the vector `c(-1, 2, 12, -4, 8, 9)`.
+
+```{r}
+x <- c(-1, 2, 12, -4, 8, 9)
+sprintf("No. of positives: %d", sum(x > 0))
+sprintf("No. of negatives: %d", sum(x < 0))
+```
+
+
+---
+
+2.(i) Write a function using R to find the area of a circle which takes in parameter “radius”.
+
+```{r}
+circle_area <- function(radius) {
+  return(pi * radius * radius)
+}
+circle_area(1)
+```
+
+
+2.(ii) Using the above function, find the area of the circle with radius 4.
+
+```{r}
+circle_area(4)
+```
+
+---
+
+3.(i) Write a function using R to get the first `n` Fibonacci numbers, which takes in parameter `n`.
+
+```{r}
+CACHE <- setNames(data.frame(c(0, 1)), "nFib")  # Use a cache to look up previous Fibonacci numbers
+fibonacci <- function(n) {
+  if (is.na(CACHE$nFib[n + 1])) {
+    nth_val <- fibonacci(n - 1) + fibonacci(n - 2)
+    CACHE[n + 1, "nFib"] <<- nth_val
+  }
+  return(CACHE[n + 1, "nFib"])
+}
+```
+
+3.(ii) Using the above function, print the first 10 Fibonacci numbers.
+```{r}
+foo <- fibonacci(10)
+print(CACHE$nFib[2:11])
+```
+
+---
+
+4.(i) Using R, create an empty matrix A of size 3 $\times$ 3
+
+```{r}
+A <- matrix(nrow=3, ncol=3)
+```
+
+4.(ii) Fill the entries of A row-wise with the vector c(1, 2, 3, 4, 5, 6, 7, 8, 9) and print matrix A.
+
+```{r}
+A <- matrix(1:9, nrow=3, ncol=3, byrow=TRUE)
+print(A)
+```
+
+4.(iii) Concatenate the vector c(10, 11, 12) as a new row to the existing matrix A and
+store it in a new matrix B.
+
+```{r}
+B <- rbind(A, c(10, 11, 12))
+print(B)
+```
+
+4.(iv) Construct a 4 $\times$ 1 matrix which takes the input as vector c(1, 2, 3, 4) and store it
+as C. Concatenate C as a new column to matrix B and store it in matrix X.
+
+```{r}
+C <- matrix(1:4, nrow=4, ncol=1)
+X <- cbind(B, C)
+print(X)
+```
+
+4.(v) Print the first and the third column of matrix X.
+
+```{r}
+print(X[, 1])
+print(X[, 3])
+```
+
+4.(vi) Create a 4 × 4 matrix with input vector as c(1 : 16) and store it as Y.
+
+```{r}
+Y <- matrix(1:16, 4, 4, byrow=TRUE)  # Assuming from the earlier question that this is row-wise
+print(Y)
+```
+
+4.(vi)(a) Transpose of Y
+
+```{r}
+Y_transpose <- t(Y)
+print(Y_transpose)
+```
+
+4.(vi)(b) Elementwise sum of X and Y
+
+```{r}
+Z <- X + Y
+print(Z)
+```
+
+4.(vi)(c) Elementwise product of X and Y
+
+```{r}
+P <- X * Y
+print(P)
+```
+
+4.(vi)(d) Matrix multiplication of X and Y
+
+```{r}
+I <- X %*% Y
+print(I)
+```
+
+---

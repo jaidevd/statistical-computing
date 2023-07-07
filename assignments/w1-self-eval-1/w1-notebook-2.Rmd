@@ -1,0 +1,99 @@
+---
+title: "W1-Self-Assessment (Part II)"
+subtitle: "Jaidev Deshpande\nRoll No: 21F1003751"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+## Week 1: Self-Assessment (Part II)
+
+---
+
+1. Two sets of values:
+$$
+x_0 = 10, a = 4^5, m = 2^{20} - 1, c = 2^5 - 1 \\
+x_0 = 10, a = 8^5, m = 2^{41} - 1, c = 2^8 - 1
+$$
+
+  a. Write an R code to generate 1000 pseudorandom numbers using the ‘Mixed Con-gruential Method’ for the first set of values. Also, plot the histogram and trace plot for the above 1000 generated pseudorandom numbers.
+  
+```{r}
+mixed_congruential <- function(
+    seed, n_samples, a = 7^5, m = (2 ^ 31) - 1, c=(2 ^ 10) - 1) {
+  x <- rep(NA, times=n_samples)
+  x[1] <- seed
+  hasRepeat <- FALSE
+  for (i in 2:n_samples) {
+    val <- (x[i - 1] * a + c) %% m
+    # If val is already present, the values will repeat
+    if (val %in% x[1:i]) {
+      hasRepeat <- TRUE
+      break
+    }
+    x[i] <- val
+  }
+  if (hasRepeat) {  # loop broke because of repeating values, so fill the rest
+    reps <- x[1:(i - 1)]  # the original sequence to be repeated
+    x[i:n_samples] <- rep(reps, length.out=(n_samples - i + 1))
+  }
+  return(x / m)
+}
+
+# First set of values
+x <- mixed_congruential(10, 1000, a=4^5, m=(2 ^ 20)-1, c=(2^5)-1)
+par(mfrow=c(1, 2))
+hist(x)
+plot.ts(x)
+```
+
+
+  b. Second set of values
+
+```{r}
+x <- mixed_congruential(10, 1000, a=8^5, m=(2 ^ 41)-1, c=(2^8)-1)
+par(mfrow=c(1, 2))
+hist(x)
+plot.ts(x)
+```
+
+  c. Comments & inference
+      Hello World.
+      
+---
+
+2.(a) Generate a sample from Binomial distribution with parameters
+n = 5 and p = 0.3 by using the “Inverse Transform Method”.
+
+```{r}
+uniform_sample <- runif(1)
+
+# params for Binomail distribution
+n = 5
+p = 0.3
+cdf <- unique(pbinom(-1:5, n, p))
+binomial_sample <- cut(uniform_sample, cdf, labels=FALSE)
+print(binomial_sample)
+```
+
+2.(b) Generate 200 samples
+
+```{r}
+uniform_samples <- runif(200)
+binomial_samples <- cut(uniform_samples, cdf, labels=FALSE) - 1
+print(mean(binomial_samples))  # empirical
+print(n * p)  # theoretical
+```
+
+
+---
+
+3. To get samples from a binomial distribution with params (n, p) using the AR sampler.
+# Re-evaluate the following:
+3.(i)
+  a. Bernoulli - **cannot** be used since the support of this distribution is _smaller_ than that of the binomial distribution
+  b. Geometric - **cannot** be used since the proposal support is a _subset_ of the target support (number of trials until the first success cannot be zero.)
+  c. Negative binomial - **can** be used since it has the same support.
+  d. Hypergeometric - **cannot** be used since it has a countably finite support.
+
+3.(ii)  Expression for c (upper bound) when the proposal is Poisson.
