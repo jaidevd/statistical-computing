@@ -1,0 +1,318 @@
+---
+title: 'Week 4: Graded Assignment'
+author: |
+  | Jaidev Deshpande
+  | Roll No: 21F1003751
+
+output:
+  pdf_document: default
+---
+
+------------------------------------------------------------------------
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. Generate samples from the distribution $f(x) = 30(x^2 -2x^3 + x^4); x \in [0, 1]$
+
+    (i). **What will be the set $C$ for the above $f(x)$?**
+    
+    The set $C$ for any distribution $f(x)$ is defined as follows,
+    
+    $$
+    C = \left\{(u, v): 0 \leq u \leq \sqrt{f\left(\frac{v}{u}\right)}\right\}
+    $$
+    
+    Simplifying the given distribution:
+    $$f(x) = 30(x^2 -2x^3 + x^4)$$
+    $$\therefore f(x) = 30x^2(1 - 2x + x^2)$$
+    $$\therefore f(x) = 30x^2(1 - x)^2$$
+    $$\therefore \sqrt{f(x)} = \sqrt{30}x(1-x)$$
+    
+    Thus, for this distribution, the set $C$ is,
+    
+    $$
+    C = \left\{(u, v): 0 \leq u \leq \sqrt{30}\frac{v}{u}\left(1 - \frac{v}{u}\right)\right\}
+    $$
+
+    (ii). **The bounds of the rectangle $[a, b] \times [c, d]$**
+    
+    $a$ is, as usual, $0$.
+    
+    $$a:=0$$
+    
+    $b$ is obtained as follows:
+    
+    $$ b:= \max_{x \in [0, 1]} \sqrt{f(x)} $$
+    $$ \therefore b= \max_{x \in [0, 1]} x (1 - x) \sqrt{30}$$
+    $$ \therefore b= \frac{\sqrt{30}}{4} \approx 1.369 $$
+    
+    $c$ is obtained as:
+    
+    $$ c := \inf_{x\leq0} x \sqrt{f(x)} $$
+    $$ \therefore c = 0 $$
+    
+    $d$ is obtained as:
+    
+    $$ d := \sup_{x\geq0} x \sqrt{f(x)} $$
+    $$ \therefore d = 0.811 $$
+    
+    Thus, the rectangle $[a, b] \times [c, d]$ is $[0, 1.369] \times [0, 0.811]$
+    
+    (iv). **Generate 10,000 samples from $f(x)$.**
+    
+    ```{r}
+    sqrt.fx <- function(x) {
+      f <- (x ^ 4) - 2 * (x ^ 3) + (x ^ 2)
+      return(sqrt(30 * f))
+    }
+
+    rou.sample <- function(a, b, c, d) {
+      # Return a sample from the rectangle [a, b, c, d], and number of tries
+      n.try <- 0
+      while (TRUE) {
+        n.try <- n.try + 1
+        u <- runif(1, min=a, max=b)
+        v <- runif(1, min=c, max=d)
+        ratio <- v / u
+        if (u <= sqrt.fx(ratio) && ratio < 1) {
+          break
+        }
+      }
+      return(c(ratio, n.try))
+    }
+    
+    N <- 10000
+    samples.from.rou <- numeric(length=N)
+    tries.from.rou <- numeric(length=N)
+    a <- 0
+    b <- sqrt(30) / 4
+    c <- 0
+    d <- 0.811
+    for (i in 1:N) {
+      sample <- rou.sample(a, b, c, d)
+      samples.from.rou[i] <- sample[1]
+      tries.from.rou[i] <- sample[2]
+    }
+    ```
+    
+    (v). **Probability of acceptance**
+    
+    The theoretical probability for acceptance is defined as $\frac{1}{2(b-a)(d-c)}$.
+    
+    ```{r}
+    theoretical_p <- 1 / (2 * (b - a) * (d - c))
+    empirical_p <- N / sum(tries.from.rou)
+    sprintf("Theoretical probability %f", theoretical_p)
+    sprintf("Empirical probability %f", empirical_p)
+    ```
+    
+    (vi). **Using $U[0, 1]$ as the proposal distribution, generate 10000 samples from $f(x)$.**
+    
+    The proposal distribution $U[0, 1]$ has the same support as $f(x)$. To find
+    the upper bound $c$ of the ratio of the target and the proposal distributions:
+    
+    $$ \sup_{x\in[0, 1]} \frac{f(x)}{g(x)} \leq c$$
+    
+    Since $g(x) = 1 \forall x \in [0, 1]$,
+    
+    $$\therefore c = \max_{x\in[0, 1]}f(x) = \max_{x \in [0, 1]}30x^2(1-x)^2 \approx 1.875$$
+    
+    ```{r}
+    fx <- function(x) 30 * (x ^ 2) * ((1 - x)^2)
+    
+    uniform.sample <- function(paramC) {  # Sample from uniform for f(x) using AR
+      n.try <- 0
+      while (TRUE) {
+        n.try <- n.try + 1
+        proposal <- runif(1)
+        
+        # probability under proposal distro
+        qy <- 1
+        
+        # probability under target distro
+        py <- fx(proposal)
+        
+        if (runif(1) < py / (paramC * qy)) {
+          break
+        }
+      }
+      return(c(proposal, n.try))
+    }
+    paramC <- 1.875
+    samples.from.uniform <- numeric(length=N)
+    tries.from.uniform <- numeric(length=N)
+    for (i in 1:N) {
+      x <- uniform.sample(paramC)
+      samples.from.uniform[i] <- x[1]
+      tries.from.uniform[i] <- x[2]
+    }
+    ```
+    
+    (vii). **Density curve of target vs density curve of samples for both approaches.**
+    
+    For the Ratio of Uniforms method:
+    
+    ```{r}
+    support <- seq(0, 1, length.out=N)
+    plot(density(samples.from.rou), col="green",
+         main="Ratio of Uniforms: Empirical vs Ideal Density")
+    lines(support, fx(support), col="blue", lty=2)
+    legend("topright", lty=1:2, col=c("green", "blue"), legend=c("Empirical", "Ideal"))
+    ```
+    
+    For sampling from $U[0, 1]$ with AR method:
+    
+    ```{r}
+    plot(density(samples.from.uniform), col="green",
+         main="AR Sampling from U[0, 1]: Empirical vs Ideal Density")
+    lines(support, fx(support), col="blue", lty=2)
+    legend("topright", lty=1:2, col=c("green", "blue"), legend=c("Empirical", "Ideal"))
+    ```
+    
+    (viii). **Comment on the efficiency of the above two methods.**
+    
+    ```{r}
+    rou.prob.accept <- N / sum(tries.from.rou)
+    ar.prob.accept <- N / sum(tries.from.uniform)
+    sprintf("P(accept) for RoU: %f", rou.prob.accept)
+    sprintf("P(accept) for AR from U[0, 1]: %f", ar.prob.accept)
+    ```
+    
+    As seen, the AR method is more efficient, since it has a higher probability of acceptance.
+    
+---
+
+2. Auditing co. wants to investigate false returns of taxpayers. $X$ denotes total
+  number of false returns. Excessive funds follow $\mathcal{N}(\mu, \sigma^2)$.
+  With probability $\delta$, taxpayers file zero false returns.
+  
+    (i) **Distribution of $X$ with parameters
+    $\mu, \sigma$ and $\delta$, where $0 \leq \delta \leq 1$.**
+    
+    The mixture distribution is
+    
+    $$ f(x) = (1 - \delta) \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{1}{2}\left(\frac{x - \mu}{\sigma}\right)^2}$$
+    
+    (ii). **Zero-inflated Normal Distribution**
+    
+    This is a 2 component mixture distribution such that,
+    it is $~\mathcal{N}(\mu, \sigma^2)$ with probability $1 - \delta$ and
+    zero with probability $\delta$.
+    
+    ```{r}
+    ZIN.sample <- function(delta, mu, sigma) {
+      x <- runif(1)
+      if (x < delta) {
+        sample <- 0
+      } else {
+        sample <- rnorm(1, mean=mu, sd=sigma)
+      }
+      return(sample)
+    }
+    ```
+    
+    (iii). **Generate 10000 samples with mu = 10, sigma = 1 and delta = 0.1.**
+    ```{r}
+    N <- 10000
+    delta <- 0.1
+    mu <- 10
+    sigma <- 1
+    samples.zin <- numeric(N)
+    for (i in 1:N) {
+      samples.zin[i] <- ZIN.sample(delta, mu, sigma)
+    }
+    ```
+    
+    (iv). **Histogrtam of the above samples**
+    ```{r}
+    hist(samples.zin, main="Zero-Inflated Normal Distribution")
+    ```
+    
+    (v). **Compare empirical and theorectical means.**
+    
+    The theoretical mean is $\approx \mu (1 - \delta)$.
+    
+    ```{r}
+    sprintf('Theoretical mean: %f', mu * (1 - delta))
+    sprintf('Empirical mean: %f', mean(samples.zin))
+    ```
+    
+    Both are approximately equal.
+
+---
+
+3. Generating samples from an $F(v_1, v_2)$ distribution using the known
+relationship between $F$ and a $\chi^2$ distribution.
+
+    (i). **Function to generate a $\chi^2_k$.**
+    
+    The sum of the squares of $k$ samples drawn from a standard normal
+    ($\mathcal{N}(0, 1)$) distribution simulates a draw from a $\chi^2_{k}$ distribution.
+    
+    ```{r}
+    chi.sq <- function(k) {
+      normals <- rnorm(k)
+      return(sum(normals ^ 2))
+    }
+    ```
+    
+    (ii). **Function to generate $F(v_1, v_2)$.**
+    
+    Suppose $X$ is a random sample from an $F$ distribution, $X \sim F(v_1, v_2)$. Then, $X$ can be approximated as 
+    
+    $$X = \frac{Y_1 / v_1}{Y_2/ v_2} $$,
+    
+    where $Y_1$ and $Y_2$ are _independent_ draws from two $\chi^2_{k}$
+    distributions, with degrees of freedom $k = v_1$ and $k = v_2$, i.e.
+    
+    $$ Y_1 \sim \chi^2_{v_{1}}$$
+    $$ Y_2 \sim \chi^2_{v_{2}}$$
+    
+    We can use this relationship as follows:
+    
+    
+    ```{r}
+    F.dist <- function(v1, v2) {
+      y1 <- chi.sq(v1)
+      y2 <- chi.sq(v2)
+      return((y1 / v1) / (y2 / v2))
+    }
+    ```
+    
+    (iii). **Draw sample of size 10000 from $F(5, 7)$**
+    
+    ```{r}
+    N <- 10000
+    F.samples <- numeric(N)
+    v1 <- 5
+    v2 <- 7
+    for (i in 1:N) {
+      F.samples[i] <- F.dist(v1, v2)
+    }
+    ```
+    
+    (iv). **Compare empirical and theoretical means.**
+    
+    The theoretical mean of an $F(v_1, v_2)$ distribution is $\frac{v_2}{v_2 - 2}$
+    
+    ```{r}
+    sprintf('Theoretical mean: %f', v2 / (v2 - 2))
+    sprintf('Empirical mean: %f', mean(F.samples))
+    ```
+    
+    Both are close to each other.
+    
+    (v). **Ideal vs Empirical Density.**
+    
+    ```{r}
+    support <- seq(0, 10, length.out=N)
+    plot(density(F.samples), xlim=c(0, 10), col="green",
+         main="F distribution: Empirical vs Ideal Density")
+    lines(support, df(support, v1, v2), col="blue", lty=2)
+    legend("topright", lty=1:2, col=c("green", "blue"), legend=c("Empirical", "Ideal"))
+    ```
+
+---
+

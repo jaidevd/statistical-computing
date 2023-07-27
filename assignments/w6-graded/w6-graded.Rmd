@@ -1,0 +1,90 @@
+---
+title: 'Week 6: Graded Assignment'
+author: "Jaidev Deshpande"
+date: "2023-07-24"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. Estimate $\theta = \int_{0}^{2}sin(x)f(x)dx$ where $f(x) \propto \frac{1}{1 + x^2}$ and $g(x) = \frac{x}{2} \forall x \in [0, 2]$.
+
+    Following weighted importance sampling, we can set the following functions:
+    
+    $$
+    \tilde{f(x)} = \frac{1}{1 + x^2}\\
+    \tilde{g(x)} = x\\
+    h(x) = sin(x)
+    $$
+    
+    1.(a) Weights for drawing from $g$ are expressed as:
+  
+    $$
+    w(x) = \frac{\tilde{f(x)}}{\tilde{g(x)}} = \frac{1}{x(1 + x^2)}
+    $$
+    
+    1.(b) Function to generate weights
+    ```{r}
+    weights <- function(N) {
+      xx <- runif(N, min=0, max=2)
+      return(1 / (xx * (1 + xx ^ 2)))
+    }
+    ```
+  
+    1.(c) Estimated value of $\theta$ for $N = 10000$:
+
+    ```{r}
+    N <- 10000
+    
+    weighted.IS <- function(N) {
+      hx <- sin(runif(N, min=0, max=2))
+      weights <- weights(N)
+      theta <- sum(hx * weights) / sum(weights)
+      return(theta)
+    }
+    ```
+
+---
+
+2. Linear Regression on the Iris dataset:
+
+    2.(a) Scatterplot of sepal length vs petal length.
+
+    ```{r}
+    plot(iris$Sepal.Length, iris$Petal.Length, xlab="Sepal Length", ylab="Petal Length")
+    ```
+
+    Simple linear regression is somewhat (not perfectly) suitable for this problem,
+    as there is an _approximately_ linear relationship between sepal length and petal length.
+    It will not be an optimal model in the squared error sense.
+
+    2.(b) MLE for the slope and the intercept
+    
+    ```{r}
+    
+    X <- cbind(1, iris$Sepal.Length)
+    y <- iris$Petal.Length
+    
+    beta.hat <- solve(t(X) %*% X) %*% t(X) %*% y
+    
+    intercept <- beta.hat[1,]
+    slope <- beta.hat[2,]
+    print(c(slope, intercept))
+    ```
+    
+    2.(c) MLE estimate of $\sigma^2$
+    
+    ```{r}
+    var.est <- t(y - X %*% beta.hat) %*% (y - X %*% beta.hat) / length(y)
+    print(var.est[,1])
+    ```
+    
+    2.(d) Best line fit:
+    
+    
+    ```{r}
+    plot(iris$Sepal.Length, iris$Petal.Length, xlab="Sepal Length", ylab="Petal Length")
+    lines(iris$Sepal.Length, iris$Sepal.Length * slope + intercept, col="blue")
+    ```
