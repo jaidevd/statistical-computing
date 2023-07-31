@@ -1,0 +1,105 @@
+---
+title: 'Week 8: Graded Assignment'
+author: |
+  | Jaidev Deshpande
+  | Roll No: 21F1003751
+
+output:
+  pdf_document: default
+---
+
+------------------------------------------------------------------------
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. MLE for Pareto distribution
+
+    1.(a) **Obtain the expression for log-likelihood as a function of $\alpha$**
+    
+    Suppose $X_1, X_2, X_3, \ldots X_n \overset{\mathrm{iid}}{\sim} Pareto(x_m, \alpha)$
+    Then the log-likelihood function is 
+    
+    $$
+    \mathcal{L}(x_m, \alpha) = ln\Bigg(\prod_{i=1}^{n}\frac{\alpha x^{\alpha}_{m}}{x^{\alpha+1}_{i}}\Bigg)
+    $$
+    
+    $$
+    \therefore \mathcal{L}(x_m, \alpha) = \sum_{i=1}^{n}ln(\alpha) + \alpha ln(x_m) - (\alpha + 1)ln(x_i)
+    $$
+    
+    $$
+    \therefore \mathcal{L}(x_m, \alpha) = n[ln(\alpha) + \alpha ln(x_m)] - (\alpha + 1)\sum_{i=1}^{n} ln(x_i)
+    $$
+    
+    1.(b) **R functions for first and second derivatives of the log-likelihood.**
+    
+    The expressions for the first two derivates of $\mathcal{L}(x_m, \alpha)$ are:
+    
+    $$ \mathcal{L}'(x_m, \alpha) = \frac{n}{\alpha} + n ln(x_m) - \sum_{i=1}^{n} ln(x_i) $$
+    $$ \mathcal{L}''(x_m, \alpha) = \frac{-n}{\alpha^2} $$
+    
+    ```{r}
+    f.prime <- function(data, x.m, alpha) {
+      length(data) / alpha + length(data) * log(x.m) - sum(log(data))
+    }
+    
+    f.double.prime <- function(data, x.m, alpha) {
+      -length(data) / (alpha ^ 2)
+    }
+    ```
+    
+    1.(c) **Does the Newton-Raphson method guarantee convergence to the global maximum?**
+    
+      * As shown above, both the first and the second dervatives of the log-likehood function exist.
+      * The first derivative, $\mathcal{L}'(x_m, \alpha)$, is inversely proportional to $\alpha$. Therefore, it is a monotonically decreasing function of $\alpha$.
+      * Since $\alpha > 0$ and $n > 0$, the second derivative $\mathcal{L}''(x_m, \alpha)$ is negative.
+      
+      Therefore, the log-likelihood function $\mathcal{L}(x_m, \alpha)$ is concave,
+      and the Newton-Raphson method is guranteed to converge to the global maximum.
+    
+    1.(d) **Newton-Raphson on the given data.**
+    
+    ```{r}
+    newton.raph <- function(data, x.m, tol=1e-5) {
+      guess <- mean(data)
+      guesses <- c(guess)
+      first.d <- f.prime(data,  x.m, guess)
+      while(abs(first.d) > tol) {
+        first.d <- f.prime(data, x.m, guess)
+        second.d <- f.double.prime(data, x.m, guess)
+        guess <- guess - first.d / second.d
+        guesses <- append(guesses, guess)  # Append the guess
+      }
+      return(guesses)
+    }
+    ```
+    
+    1.(e) **For $x_m = 2$, find the optimum value.**
+    
+    ```{r}
+    X <- c(2.111398, 2.354323, 2.339421, 2.160081, 3.362930, 2.182222, 2.096592,
+           2.699267, 3.789588, 2.421125)
+    alpha.guesses <- newton.raph(X, x.m=2)
+    sprintf("Optimal alpha: %f", tail(alpha.guesses, 1))
+    ```
+    
+    1.(d) **Plot the log-likelihood function and the values from Newton-Raphson.**
+    
+    ```{r}
+    pareto.ll <- function(data, alpha, x.m) {
+      logsum <- sum(log(data))
+      n <- length(data)
+      return(n * log(alpha) + n * alpha * log(x.m) - (alpha + 1) * logsum)
+    }
+    alphas <- seq(1, 7, length.out=1000)
+    plot(alphas, pareto.ll(X, alphas, x.m=2), type="s",
+         xlab=expression(alpha), ylab="Log Likelihood")
+    lines(alpha.guesses, pareto.ll(X, alpha.guesses, x.m=2), type="p",
+          col="blue", pch=15,cex=1)
+    abline(v=mean(X), col="red", lty=2)
+    abline(v=tail(alpha.guesses, 1), col="green", lty=2)
+    legend("bottomright", lty=2, col=c("red", "green"),
+           legend=c("Initial guess (mean)", "Optimal alpha"))
+    ```
