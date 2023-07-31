@@ -1,0 +1,110 @@
+---
+title: 'Week 7: Graded Assignment'
+author: |
+  | Jaidev Deshpande
+  | Roll No: 21F1003751
+
+output:
+  pdf_document: default
+---
+
+------------------------------------------------------------------------
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. Multiple regression on `mtcars`
+
+    1.(a) **Load the dataset and fit a multiple linear regression model.**
+
+    ```{r}
+    y <- mtcars$disp
+    X <- as.matrix(mtcars[, !(names(mtcars) %in% c("disp"))])
+    X <- cbind(1, X)
+    
+    beta.hat <- solve(t(X) %*% X) %*% t(X) %*% y
+    print(beta.hat)
+    ```
+    Thus, the regression model is (approximately rounded off for better rendering), 
+    $$
+    y = 1.93x_{mpg} + 15.38x_{cyl} +0.66x_{hp} + 8.81x_{drat}
+    $$
+    $$
+    + 86.71x_{wt} -12.97x_{qsec} -12.11x_{vs} -7.91x_{am}
+    $$
+    $$
+    + 5.12x_{gear} -30.1x_{carb} - 5.81
+    $$
+    
+    1.(b) **Ridge regression.**
+
+    ```{r}
+    beta.ridge <- function(X, y, lambda) {
+      solve(t(X) %*% X + lambda * diag(ncol(X))) %*% t(X) %*% y
+    }
+    ```
+    
+    1.(c) **Ridge regression with $\lambda=0.01$.**
+
+    ```{r}
+    beta.penalized <- beta.ridge(X, y, lambda = 0.01)
+    print(beta.penalized)
+    ```
+    Compared to the earlier, un-penalized values of $\beta$, the penalized values are slightly smaller in magnitude.
+    
+    1.(d) **What happens for $\lambda = 10$?**
+    
+    ```{r}
+    beta.penalized <- beta.ridge(X, y, lambda=10)
+    print(beta.penalized)
+    ```
+    Compared with the previous values of $\beta$, the largest magnitudes have become significantly smaller.
+    E.g notice the change in the `wt` weight (reduced from 86.5 for $\lambda=0.01$ to 27.8 for $\lambda=10$
+    (Similarly for the intercept and `carb`, etc.)
+    
+    ```{r}
+    lambdas <- c(0, 0.001, 0.01, 0.1, 1, 10)
+    norms <- numeric(length=length(lambdas))
+    for (i in 1:length(norms)) {
+      norms[i] <- norm(beta.ridge(X, y, lambda=lambdas[i]), type="F")
+    }
+    plot(lambdas, norms, type="o", log="x", xlab="Lambda", ylab="L2 norm of beta")
+    ```
+    As shown, the $L_2$ norm of $\beta$ decreases as $\lambda$ increases.
+
+---
+
+2. Taylor Series Approximations
+
+    2.(a) Approximate `sin` till the $n^{th}$ term.
+
+    ```{r}
+    taylor.sin <- function(x, n, x0 = 0) {
+      approx <- sin(x0)
+      for (i in 1:(n-1)) {
+        approx <- approx + sin(x + n * pi / 2) * ((x - x0) ^ i) / factorial(i)
+      }
+      return(approx)
+    }
+    ```
+    
+    2.(b) **Find $sin(x)$ at $x = 0.2, 5$ for $n = 3$**
+    ```{r}
+    x1 <- taylor.sin(0.2, 3)
+    x2 <- taylor.sin(5, 3)
+    sprintf("Approximate sin(0.2) = %f", x1)
+    sprintf("Approximate sin(5) = %f", x2)
+    ```
+    
+    2.(c) **Compare with the true values.**
+    ```{r}
+    xx <- seq(0, 6, length.out=1000)
+    y.true <- sin(xx)
+    plot(xx, y.true, xlab="x", ylab="sin(x)", type="l", ylim=c(-5, 1))
+    points(c(0.2, 5), c(x1, x2), col="blue", pch=16)
+    segments(x0=c(0.2, 5), y0=c(x1, x2), y1=sin(c(0.2, 5)), lty="dashed", col="blue")
+    legend("bottomleft", lty=1, col=c("black", "blue"), legend=c("sin(x)", "Approximation"))
+    ```
+    
+    As seen from the plot, the approximation gets worse as we move away from $x_0$.
