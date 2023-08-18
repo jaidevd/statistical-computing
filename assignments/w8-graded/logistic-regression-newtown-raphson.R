@@ -1,5 +1,5 @@
 require("mlbench")
-
+data("PimaIndiansDiabetes")
 df <- PimaIndiansDiabetes
 y <- as.integer(df$diabetes == "pos")
 X <- df[, !(names(df) %in% c("diabetes"))]
